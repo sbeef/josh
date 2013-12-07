@@ -11,6 +11,7 @@
 #define MAX_INPUT 1024
 #define DELIM " "
 
+void strRealloc(char *string);
 void p2(char **args);
 void allocCheck(void *pointer);
 char ** parse(char *input);
