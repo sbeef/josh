@@ -2,8 +2,15 @@
 #define JOSH_H
 
 #include <stdio.h>
-#define MAX_INPUT 1024;
+#include <string.h>
+#include <stdlib.h>
 
+#define MAX_INPUT 1024
+#define DELIM " "
+
+
+
+char ** parse(char *input);
 int main();
 
 #endif

@@ -1,5 +1,19 @@
 #include "josh.h"
 
+char ** parse(char *input) {
+  int i;
+  char *temp, **args;
+  args = malloc(sizeof(char *) * 1024);
+  temp = strtok(input, DELIM);
+  i = 0;
+  while (NULL != temp) {
+    args[i] = strtok(NULL, DELIM);
+    i++;
+  }
+  args[i] = NULL;
+  return args;
+}
+
 int main() {
   int c, i;
   char input[MAX_INPUT];
@@ -14,3 +28,4 @@ int main() {
     } else 
       input[i] = c;
   }
+}
