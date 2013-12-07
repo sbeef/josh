@@ -1,11 +1,28 @@
 #include "josh.h"
 
-
 void allocCheck(void *pointer) {
   if (NULL == pointer) {
     fprintf(stderr, "%s\n", "Could not allocate memory");
     exit(EXIT_FAILURE);
   }
+}
+
+void p2(char **args){
+  pid_t child = fork();
+  if (-1 == child){
+    perror("Fork failed");
+    exit(EXIT_FAILURE);
+  }
+  if (child){
+    int status;
+    wait(&status);
+  }
+  else {
+    execvp(args[0], args);
+    perror("Exec failed");
+    exit(EXIT_FAILURE);
+  }
+
 }
 
 char ** parse(char *input) {
@@ -17,8 +34,6 @@ char ** parse(char *input) {
   for (args[0] = strtok(input, DELIM); NULL != args[i-1]; i++) 
     args[i] = strtok(NULL, DELIM);
   args[i] = NULL;
-  args = realloc(args, sizeof(char *) * (i+1));
-  allocCheck(args);
   return args;
 }
 
@@ -26,8 +41,6 @@ int main() {
   int c, i;
   char **args, *input;
   i = 0;
-  input = malloc(sizeof(char) * MAX_INPUT);
-  allocCheck(input);
   while (EOF != (c = getchar())) {
     if (i == MAX_INPUT) {
       // handle overflow
