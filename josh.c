@@ -19,7 +19,7 @@ void p2(char **args){
   }
   else {
     execvp(args[0], args);
-    perror("Exec failed");
+    //perror("Exec failed");
     exit(EXIT_FAILURE);
   }
 
@@ -27,7 +27,7 @@ void p2(char **args){
 
 char ** parse(char *input) {
   int i;
-  char *temp, **args;
+  char **args;
   args = malloc(sizeof(char *) * 1024);
   allocCheck(args);
   i = 1;
@@ -41,12 +41,14 @@ int main() {
   int c, i;
   char **args, *input;
   i = 0;
+  input = malloc(sizeof(char) * MAX_INPUT);
+  allocCheck(input);
   while (EOF != (c = getchar())) {
     if (i == MAX_INPUT) {
       // handle overflow
     } else if ('\n' == c) {
-      input[i] = c;
       args = parse(input);
+      p2(args);
       i = 0;
     } else {
       input[i] = c;
