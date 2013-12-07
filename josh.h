@@ -9,7 +9,7 @@
 #define DELIM " "
 
 
-
+void allocCheck(void *pointer);
 char ** parse(char *input);
 int main();
 
