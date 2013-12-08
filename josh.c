@@ -65,7 +65,7 @@ void p2(char **args){
     int status;
     if ('&' == args[len-1][0]) {
       printf("anded");
-      waitpid(child, &status, WNOHANG);
+      waitpid(-1, &status, WNOHANG);
     } else {
       //printf("fg\n");
       signal(SIGINT, sigHandler);
