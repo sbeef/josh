@@ -22,10 +22,9 @@ struct args {
 char ** pargs(char **args);
 void sigHandler(int sig);
 void strRealloc(char *string);
-//void p2(char **args);
 void p2(struct args *arguments);
+struct args * parse(char *input);
 void allocCheck(void *pointer);
-//char ** parse(char *input);
 int main();
 
 
