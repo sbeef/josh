@@ -13,12 +13,21 @@
 
 pid_t child;
 
+struct args {
+  char *program;
+  char **program_args;
+  char **shell_args;
+};
+
 char ** pargs(char **args);
 void sigHandler(int sig);
 void strRealloc(char *string);
-void p2(char **args);
+//void p2(char **args);
+void p2(struct args *arguments);
 void allocCheck(void *pointer);
-char ** parse(char *input);
+//char ** parse(char *input);
 int main();
+
+
 
 #endif

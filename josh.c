@@ -1,5 +1,6 @@
 #include "josh.h"
 
+
 void allocCheck(void *pointer) {
   if (NULL == pointer) {
     fprintf(stderr, "%s\n", "Could not allocate memory");
@@ -50,12 +51,9 @@ char ** pargs(char **args) {
   return nargs;
 }
 
-void p2(char **args){
-  char **cargs;
-  cargs = pargs(args);
-  int len = 0;
-  while (NULL != args[len])
-    len++;
+void p2(struct args *arguments){
+  /*while (NULL != args[len])
+    len++;*/
   child = fork();
   if (-1 == child){
     perror("Fork failed");
@@ -63,7 +61,7 @@ void p2(char **args){
   }
   if (child){
     int status;
-    if ('&' == args[len-1][0]) {
+    if ('&' == arguments->shell_args[0][0]) {
       printf("anded");
       waitpid(-1, &status, WNOHANG);
     } else {
@@ -73,7 +71,7 @@ void p2(char **args){
     }
   }
   else {
-    execvp(cargs[0], cargs);
+    execvp(arguments->program, arguments->program_args);
     perror("Exec failed");
     //argFree(args);
     exit(EXIT_FAILURE);
@@ -93,7 +91,54 @@ char ** parseold(char *input) {
     return args;
 }
 
-char ** parse(char *input) {
+struct args * parse(char *input) {
+  struct args *arguments = malloc(sizeof(struct args));
+  allocCheck(arguments);
+  int i = 1;
+  char **args, temp, tokTemp;
+  args = malloc(sizeof(char *) * MAX_INPUT);
+  allocCheck(args);
+  for (args[0] = strtok(input, DELIM); NULL != args[i-1]; i++)
+    args[i] = strtok(NULL, DELIM);
+  args[i] = NULL;
+  args = realloc(args, sizeof(char *) * (i+1));
+  allocCheck(args);
+  arguments->program = malloc(sizeof(char) * MAX_INPUT);
+  allocCheck(args);
+  strncpy(arguments->program, args[0], strlen(args[0]) + 1);
+  int j, len, size;
+  i = j = 0;
+  char c;
+  while (NULL != args[i]) {
+    c = args[i][0];
+    if ('|' == c || '<' == c || '>' == c || '&' == c)
+      break;
+    i++;
+  }
+  arguments->program_args = malloc(sizeof(char *) * (i + 1));
+  for (j = 0; j < i; j++) {
+    len = strlen(args[j]) + 1;
+    arguments->program_args[j] = malloc(sizeof(char) * len);
+    allocCheck(arguments->program_args[j]);
+    strncpy(arguments->program_args[j], args[j], len);
+  }
+  arguments->program_args[j] = NULL;
+  i = i-1;
+  size = 0;
+  while (NULL != args[i+size]) {
+    size ++;
+  }
+  arguments->shell_args = malloc(sizeof(char *) * (size));
+  for (j = 0; j < (size); j++) {
+    len = strlen(args[j + i]) + 1;
+    arguments->shell_args[j] = malloc(sizeof(char) * len);
+    allocCheck(arguments->shell_args[j]);
+    strncpy(arguments->shell_args[j], args[j+i], len);
+  }
+  return arguments;
+}
+
+char ** parse_old(char *input) {
   int i;
   char **args, *temp, *tokTemp;
   args = malloc(sizeof(char *) * MAX_INPUT);
@@ -123,6 +168,7 @@ char ** parse(char *input) {
 
 int main() {
   int c, i;
+  struct args *arguments;
   char **args, *input;
   i = 0;
   input = malloc(sizeof(char) * MAX_INPUT);
@@ -133,8 +179,8 @@ int main() {
       // handle overflow
     } else if ('\n' == c) {
       input[i] = '\0';
-      args = parse(input);
-      p2(args);
+      arguments = parse(input);
+      p2(arguments);
       allocCheck(input);
       i = 0;
       printf("$");
