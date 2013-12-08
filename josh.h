@@ -13,6 +13,7 @@
 
 pid_t child;
 
+char ** pargs(char **args);
 void sigHandler(int sig);
 void strRealloc(char *string);
 void p2(char **args);

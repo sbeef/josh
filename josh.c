@@ -27,7 +27,35 @@ void argFree(char **args) {
   free(args);
 }
 
+// gets just the args for the program
+char ** pargs(char **args) {
+  int i, j, len;
+  i = j = 0;
+  char c, **nargs;
+  while (NULL != args[i]) {
+    c = args[i][0];
+    if ('|' == c || '<' == c || '>' == c || '&' == c)
+      break;
+    i++;
+  }
+  nargs = malloc(sizeof(char *) * (i+1));
+  fflush(stdout);
+  for (j = 0; j < i; j++) {
+    len = strlen(args[j]) + 1;
+    nargs[j] = malloc(sizeof(char) * len);
+    allocCheck(args[j]);
+    strncpy(nargs[j], args[j], len);
+  }
+  nargs[j] = NULL;
+  return nargs;
+}
+
 void p2(char **args){
+  char **cargs;
+  cargs = pargs(args);
+  int len = 0;
+  while (NULL != args[len])
+    len++;
   child = fork();
   if (-1 == child){
     perror("Fork failed");
@@ -35,11 +63,17 @@ void p2(char **args){
   }
   if (child){
     int status;
-    signal(SIGINT, sigHandler);
-    wait(&status);
+    if ('&' == args[len-1][0]) {
+      printf("anded");
+      waitpid(child, &status, WNOHANG);
+    } else {
+      //printf("fg\n");
+      signal(SIGINT, sigHandler);
+      wait(&status);
+    }
   }
   else {
-    execvp(args[0], args);
+    execvp(cargs[0], cargs);
     perror("Exec failed");
     //argFree(args);
     exit(EXIT_FAILURE);
@@ -88,12 +122,12 @@ char ** parse(char *input) {
 }
 
 int main() {
-  printf("MAXINPUT:%d\n", MAX_INPUT);
   int c, i;
   char **args, *input;
   i = 0;
   input = malloc(sizeof(char) * MAX_INPUT);
   allocCheck(input);
+  printf("$");
   while (EOF != (c = getchar())) {
     if (i == MAX_INPUT) {
       // handle overflow
@@ -103,6 +137,7 @@ int main() {
       p2(args);
       allocCheck(input);
       i = 0;
+      printf("$");
     } else {
       input[i] = c;
       i++;
