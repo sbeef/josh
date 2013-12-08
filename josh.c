@@ -120,7 +120,7 @@ struct args * parse(char *input) {
 int main() {
   int c, i;
   struct args *arguments;
-  char **args, *input;
+  char *input;
   i = 0;
   input = malloc(sizeof(char) * MAX_INPUT);
   allocCheck(input);
