@@ -28,28 +28,7 @@ void argFree(char **args) {
   free(args);
 }
 
-// gets just the args for the program
-char ** pargs(char **args) {
-  int i, j, len;
-  i = j = 0;
-  char c, **nargs;
-  while (NULL != args[i]) {
-    c = args[i][0];
-    if ('|' == c || '<' == c || '>' == c || '&' == c)
-      break;
-    i++;
-  }
-  nargs = malloc(sizeof(char *) * (i+1));
-  fflush(stdout);
-  for (j = 0; j < i; j++) {
-    len = strlen(args[j]) + 1;
-    nargs[j] = malloc(sizeof(char) * len);
-    allocCheck(args[j]);
-    strncpy(nargs[j], args[j], len);
-  }
-  nargs[j] = NULL;
-  return nargs;
-}
+
 
 void p2(struct args *arguments){
   /*while (NULL != args[len])
@@ -79,36 +58,31 @@ void p2(struct args *arguments){
 
 }
 
-char ** parseold(char *input) {
-    int i;
-    char **args;
-    args = malloc(sizeof(char *) * 1024);
-    allocCheck(args);
-    i = 1;
-    for (args[0] = strtok(input, DELIM); NULL != args[i-1]; i++) 
-      args[i] = strtok(NULL, DELIM);
-    args[i] = NULL;
-    return args;
-}
 
+/* figures out what's what*/
 struct args * parse(char *input) {
+  // the arguements will go here
   struct args *arguments = malloc(sizeof(struct args));
-  allocCheck(arguments);
-  int i = 1;
-  char **args, temp, tokTemp;
+  allocCheck(arguments); //did malloc work?
+  int i = 1; //this will be important in the later day
+  char **args;// the tokenized input
   args = malloc(sizeof(char *) * MAX_INPUT);
   allocCheck(args);
+  /*TOKENIZE THAT!  YEA*/
   for (args[0] = strtok(input, DELIM); NULL != args[i-1]; i++)
     args[i] = strtok(NULL, DELIM);
   args[i] = NULL;
+  //shrink it down to size
   args = realloc(args, sizeof(char *) * (i+1));
   allocCheck(args);
+  /* alrighty, what's the program we should run */
   arguments->program = malloc(sizeof(char) * MAX_INPUT);
   allocCheck(args);
   strncpy(arguments->program, args[0], strlen(args[0]) + 1);
   int j, len, size;
   i = j = 0;
   char c;
+  /* how many arguments apply to this specific program? */
   while (NULL != args[i]) {
     c = args[i][0];
     if ('|' == c || '<' == c || '>' == c || '&' == c)
@@ -116,6 +90,7 @@ struct args * parse(char *input) {
     i++;
   }
   arguments->program_args = malloc(sizeof(char *) * (i + 1));
+  /* now fill program_args with the arguments for that program */
   for (j = 0; j < i; j++) {
     len = strlen(args[j]) + 1;
     arguments->program_args[j] = malloc(sizeof(char) * len);
@@ -123,11 +98,13 @@ struct args * parse(char *input) {
     strncpy(arguments->program_args[j], args[j], len);
   }
   arguments->program_args[j] = NULL;
+  /* now figure out how many arguments are left */
   i = i-1;
   size = 0;
   while (NULL != args[i+size]) {
     size ++;
   }
+  /* stick the remaining arguments in the shell_args */
   arguments->shell_args = malloc(sizeof(char *) * (size));
   for (j = 0; j < (size); j++) {
     len = strlen(args[j + i]) + 1;
@@ -135,36 +112,10 @@ struct args * parse(char *input) {
     allocCheck(arguments->shell_args[j]);
     strncpy(arguments->shell_args[j], args[j+i], len);
   }
+  // you're done!
   return arguments;
 }
 
-char ** parse_old(char *input) {
-  int i;
-  char **args, *temp, *tokTemp;
-  args = malloc(sizeof(char *) * MAX_INPUT);
-  allocCheck(args);
-  i = 1;
-  temp = malloc(sizeof(char) * MAX_INPUT);
-  allocCheck(temp);
-  tokTemp = strtok(input, DELIM);
-  temp = strncpy(temp, tokTemp, MAX_INPUT);
-  //strRealloc(temp);
-  allocCheck(temp);
-  for (args[0] = temp; NULL != args[i-1]; i++) {
-    temp = malloc(sizeof(char) * MAX_INPUT);
-    allocCheck(temp);
-    tokTemp = strtok(NULL, DELIM);
-    if (NULL == tokTemp)
-      break;
-    temp = strncpy(temp, tokTemp, MAX_INPUT);
-    //temp = strncpy(temp, strtok(NULL, DELIM), MAX_INPUT);
-    //strRealloc(temp);
-    allocCheck(temp);
-    args[i] = temp;
-  }
-  args[i] = NULL;
-  return args;
-}
 
 int main() {
   int c, i;
