@@ -7,6 +7,13 @@ void allocCheck(void *pointer) {
   }
 }
 
+void sigHandler(int sig) {
+  switch(sig) {
+    case SIGINT:
+      kill(child, SIGINT);
+  }
+}
+
 void strRealloc(char *string) {
   int len;
   len = strlen(string);
@@ -21,13 +28,14 @@ void argFree(char **args) {
 }
 
 void p2(char **args){
-  pid_t child = fork();
+  child = fork();
   if (-1 == child){
     perror("Fork failed");
     exit(EXIT_FAILURE);
   }
   if (child){
     int status;
+    signal(SIGINT, sigHandler);
     wait(&status);
   }
   else {

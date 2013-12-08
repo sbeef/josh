@@ -11,6 +11,9 @@
 #define MAX_INPUT 1024
 #define DELIM " "
 
+pid_t child;
+
+void sigHandler(int sig);
 void strRealloc(char *string);
 void p2(char **args);
 void allocCheck(void *pointer);
