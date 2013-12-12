@@ -28,6 +28,8 @@ void strRealloc(char *string) {
   string = realloc(string, len+1);
 }
 
+// freeArgs
+// frees every argument in args structure
 void freeArgs(struct args *arguments) {
   free(arguments->program);
   string_array_free(arguments->program_args);
@@ -37,6 +39,8 @@ void freeArgs(struct args *arguments) {
   free(arguments);
 }
 
+// string_array_free
+// dynamically frees in an array of strings
 void string_array_free(char ** strings) {
   int i = 0;
   while (NULL != strings[i])
@@ -81,7 +85,7 @@ void p2(struct args *arguments){
       dup2(fileno(output), STDOUT_FILENO);
       fclose(output);
     }
-    /*if (NULL != arguments->shell_args[0] && arguments->shell_args[0][0] == '|') {  
+    if (NULL != arguments->pipe_args[0] && arguments->pipe_args[0][0] == '|') {  
       pipebool = 1;
       pid_t forkChild;
       int fd[2];
@@ -98,29 +102,26 @@ void p2(struct args *arguments){
   	close(fd[1]);
         execvp(arguments->program, arguments->program_args);                                         // Executes child's program
       }
- tring_array_free(args);
- else{                // After pipe
+      else{                // After pipe
         close(fd[1]);                                                   // Close unnecessary parent input link to tunnel
         dup2(fd[0], STDIN_FILENO);                                     // Change parent's output to tunnel input
   	close(fd[0]);
-        char *cprog = arguments->shell_args[1];                       // Name child's program
+        char *cprog = arguments->pipe_args[1];                       // Name child's program
         char **cpargs;                                                // Initialize child's program arguments
         int i = 0;
-        while(NULL != arguments->shell_args[i+1])                     // Get number of child's program arguments (terminating NULL included)
+        while(NULL != arguments->pipe_args[i+1])                     // Get number of child's program arguments (terminating NULL included)
           i++;
         cpargs = malloc(sizeof(char *) * (i + 1));
-  string_array_free(args);
-  allocCheck(cpargs);
         for (int j = 0; j < i; j++) {                                 // Fill child's program args
-          int len = strlen(arguments->shell_args[j+1]) + 1;
+          int len = strlen(arguments->pipe_args[j+1]) + 1;
           cpargs[j] = malloc(sizeof(char) * len);
           allocCheck(cpargs[j]);
-          strncpy(cpargs[j], arguments->shell_args[j+1], len);
+          strncpy(cpargs[j], arguments->pipe_args[j+1], len);
         }
         cpargs[i] = NULL;
         execvp(cprog,cpargs);                                         // Executes child's program
       }
-    }*/
+    }
     if(pipebool == 0)
       execvp(arguments->program, arguments->program_args);
     perror("Exec failed");
@@ -190,8 +191,8 @@ struct args * parse(char *input) {
   while (NULL != args[i+size]) {
     size ++;
   }
-  /* stick the remaining arguments in the shell_args */
-  //arguments->shell_args = malloc(sizeof(char *) * (size + 1));
+  /* stick the remaining arguments in the pipe_args */
+  //arguments->pipe_args = malloc(sizeof(char *) * (size + 1));
   for (j = 0; j < (size); j++) {
     if (args[j+i][0] == '|')
       break;
@@ -228,8 +229,8 @@ struct args * parse(char *input) {
   allocCheck(arguments->pipe_args);
   // you're done!
   i = 0;
-  /*while(NULL != arguments->shell_args[i]) {
-    printf("arg[%d]: %s\n", i, arguments->shell_args[i]);
+  /*while(NULL != arguments->pipe_args[i]) {
+    printf("arg[%d]: %s\n", i, arguments->pipe_args[i]);
     i++;
   }*/
   //string_array_free(args);
@@ -242,7 +243,7 @@ int main() {
   int c, i;
   struct args *arguments;
   char *input;
-  char *usrname = getlogin();
+  char *usrname = getenv("LOGNAME");
   i = 0;
   input = malloc(sizeof(char) * MAX_INPUT);
   allocCheck(input);
