@@ -58,7 +58,7 @@ void p2(struct args *arguments){
   }
   if (child){
     int status;
-    if (NULL != arguments->shell_args[0] && '&' == arguments->shell_args[0][0]) {
+    if  (arguments->background) {
       printf("anded");
       waitpid(-1, &status, WNOHANG);
     }
@@ -66,17 +66,18 @@ void p2(struct args *arguments){
       //printf("fg\n");
       signal(SIGINT, sigHandler);
       wait(&status);
+      freeArgs(arguments);
     }
   }
   else {
     int pipebool = 0;
-    if (NULL != arguments->shell_args[0] && '<' == arguments->shell_args[0][0]) {
-      input = fopen(arguments->shell_args[1], "r");
+    if (arguments->in_redir) {
+      input = fopen(arguments->in_file, "r");
       dup2(fileno(input), STDIN_FILENO);
       fclose(input);
     }
-    if (NULL != arguments->shell_args[0] && '>' == arguments->shell_args[0][0]) {
-      output = fopen(arguments->shell_args[1], "w");
+    if (arguments->out_redir) {
+      output = fopen(arguments->out_file, "w");
       dup2(fileno(output), STDOUT_FILENO);
       fclose(output);
     }
