@@ -169,6 +169,7 @@ void p2(struct args *arguments){
         }
         cpargs[i] = NULL;
         execvp(cprog,cpargs);                                         // Executes child's program
+        string_array_free(cpargs);
       }
     }
     if(pipebool == 0)
