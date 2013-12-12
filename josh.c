@@ -80,7 +80,46 @@ void p2(struct args *arguments){
       dup2(fileno(output), STDOUT_FILENO);
       fclose(output);
     }
-    execvp(arguments->program, arguments->program_args);
+    if (NULL != arguments->shell_args[0] && arguments->shell_args[0][0] == '|') {  
+      pipebool = 1;
+      pid_t forkChild;
+      int fd[2];
+      pipe(fd);
+
+      forkChild = fork();
+      if(-1 == forkChild){
+  	perror("Fork failed");
+  	exit(EXIT_FAILURE);
+      }
+      else if(forkChild == 0){            // Before pipe
+  	close(fd[0]);
+        dup2(fd[1], STDOUT_FILENO);                                    // Change child's input to tunnel output
+  	close(fd[1]);
+        execvp(arguments->program, arguments->program_args);                                         // Executes child's program
+      }
+      else{                // After pipe
+        close(fd[1]);                                                   // Close unnecessary parent input link to tunnel
+        dup2(fd[0], STDIN_FILENO);                                     // Change parent's output to tunnel input
+  	close(fd[0]);
+        char *cprog = arguments->shell_args[1];                       // Name child's program
+        char **cpargs;                                                // Initialize child's program arguments
+        int i = 0;
+        while(NULL != arguments->shell_args[i+1])                     // Get number of child's program arguments (terminating NULL included)
+          i++;
+        cpargs = malloc(sizeof(char *) * (i + 1));
+        allocCheck(cpargs);
+        for (int j = 0; j < i; j++) {                                 // Fill child's program args
+          int len = strlen(arguments->shell_args[j+1]) + 1;
+          cpargs[j] = malloc(sizeof(char) * len);
+          allocCheck(cpargs[j]);
+          strncpy(cpargs[j], arguments->shell_args[j+1], len);
+        }
+        cpargs[i] = NULL;
+        execvp(cprog,cpargs);                                         // Executes child's program
+      }
+    }
+    if(pipebool == 0)
+      execvp(arguments->program, arguments->program_args);
     perror("Exec failed");
     //argFree(args);
     exit(EXIT_FAILURE);
