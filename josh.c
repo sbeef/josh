@@ -253,8 +253,10 @@ struct args * parse(char *input) {
   for (j = 0; j < (size); j++) {
     if (args[j+i][0] == '|')
       break;
-    else if (args[j][0] == '&')
+    else if (args[j+i][0] == '&') {
+      printf("found and\n");
       arguments->background = 1;
+    }
     else if (args[j][0] == '<' && arguments->in_redir == 0) {
       arguments->in_redir = 1;
       j++;
