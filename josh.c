@@ -21,11 +21,22 @@ void strRealloc(char *string) {
   string = realloc(string, len+1);
 }
 
-void argFree(char **args) {
+void freeArgs(struct args *arguments) {
+  free(arguments->program);
+  string_array_free(arguments->program_args);
+  string_array_free(arguments->pipe_args);
+  free(arguments->out_file);
+  free(arguments->in_file);
+  free(arguments);
+}
+
+void string_array_free(char ** strings) {
   int i = 0;
-  while (NULL != args[i])
-    free(args[i++]);
-  free(args);
+  while (NULL != strings[i]) {
+    free(strings[i]);
+    i++;
+  }
+  free(strings);
 }
 
 
@@ -41,39 +52,54 @@ void p2(struct args *arguments){
   }
   if (child){
     int status;
-    if (NULL != arguments->shell_args[0] && '&' == arguments->shell_args[0][0]) {
+    if (arguments->background) {
       printf("anded");
       waitpid(-1, &status, WNOHANG);
     } else {
       //printf("fg\n");
       signal(SIGINT, sigHandler);
       wait(&status);
+      freeArgs(arguments);
     }
   }
   else {
-    if (NULL != arguments->shell_args[0] && '<' == arguments->shell_args[0][0]) {
-      input = fopen(arguments->shell_args[1], "r");
+    if (arguments->in_redir) {
+      input = fopen(arguments->in_file, "r");
       dup2(fileno(input), STDIN_FILENO);
       fclose(input);
     }
-    if (NULL != arguments->shell_args[0] && '>' == arguments->shell_args[0][0]) {
-      output = fopen(arguments->shell_args[1], "w");
+    if (arguments->out_redir) {
+      output = fopen(arguments->out_file, "w");
       dup2(fileno(output), STDOUT_FILENO);
       fclose(output);
     }
     execvp(arguments->program, arguments->program_args);
     perror("Exec failed");
-    //argFree(args);
+    //freeArgs(arguments);
     exit(EXIT_FAILURE);
   }
 
+}
+
+struct args * arginit() {
+  struct args *arguments = malloc(sizeof(struct args));
+  allocCheck(arguments);
+  arguments->program = NULL;
+  arguments->program_args = NULL;
+  arguments->out_redir = 0;
+  arguments->in_redir = 0;
+  arguments->in_file = NULL;
+  arguments->out_file = NULL;
+  arguments->background = 0; 
+  arguments->pipe_args = NULL;
+  return arguments;
 }
 
 
 /* figures out what's what*/
 struct args * parse(char *input) {
   // the arguements will go here
-  struct args *arguments = malloc(sizeof(struct args));
+  struct args *arguments = arginit();
   allocCheck(arguments); //did malloc work?
   int i = 1; //this will be important in the later day
   char **args;// the tokenized input
@@ -116,20 +142,42 @@ struct args * parse(char *input) {
     size ++;
   }
   /* stick the remaining arguments in the shell_args */
-  arguments->shell_args = malloc(sizeof(char *) * (size + 1));
+  //arguments->shell_args = malloc(sizeof(char *) * (size + 1));
   for (j = 0; j < (size); j++) {
-    len = strlen(args[j + i]) + 1;
-    arguments->shell_args[j] = malloc(sizeof(char) * len);
-    allocCheck(arguments->shell_args[j]);
-    strncpy(arguments->shell_args[j], args[j+i], len);
+    if (args[j+i][0] == '|')
+      break;
+    else if (args[j][0] == '&')
+      arguments->background = 1;
+    else if (args[j][0] == '<' && arguments->in_redir == 0) {
+      arguments->in_redir = 1;
+      j++;
+      arguments->in_file = args[j];
+    } else if (args[j][0] == '>' && arguments->out_redir == 0) {
+      arguments->out_redir = 1;
+      j++;
+      arguments->out_file = args[j];
+    }
   }
-  arguments->shell_args[j] = NULL;
+  arguments->pipe_args = malloc(sizeof(char *) * (size + 1));
+  arguments->background = 0; 
+  //int s = 1;
+  for (; j < (size); j++) {
+    len = strlen(args[j+i]) + 1;
+    arguments->pipe_args[j] = malloc(sizeof(char) * len);
+    allocCheck(arguments->pipe_args[j]);
+    strncpy(arguments->pipe_args[j], args[j+i], len);
+    //s++;
+  }
+  arguments->pipe_args[j] = NULL;
+  arguments->pipe_args = realloc(arguments->pipe_args, sizeof(char *) * (j+1));
+  allocCheck(arguments->pipe_args);
   // you're done!
   i = 0;
   /*while(NULL != arguments->shell_args[i]) {
     printf("arg[%d]: %s\n", i, arguments->shell_args[i]);
     i++;
   }*/
+  string_array_free(args);
   return arguments;
 }
 
@@ -137,6 +185,7 @@ struct args * parse(char *input) {
 int main() {
   int c, i;
   struct args *arguments;
+  //arguments = 
   char *input;
   i = 0;
   input = malloc(sizeof(char) * MAX_INPUT);

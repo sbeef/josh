@@ -18,9 +18,16 @@ pid_t child;
 struct args {
   char *program;
   char **program_args;
-  char **shell_args;
+  char **pipe_args;
+  int out_redir;
+  int in_redir;
+  char * out_file;
+  char * in_file;
+  int background;
 };
 
+void freeArgs(struct args *arguments);
+void string_array_free(char **strings);
 char ** pargs(char **args);
 void sigHandler(int sig);
 void strRealloc(char *string);
