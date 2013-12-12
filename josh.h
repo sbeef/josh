@@ -13,6 +13,7 @@
 #define MAX_INPUT 1024
 #define DELIM " "
 
+char *josh_prompt = ":J0Sh:$ ";
 pid_t child;
 
 struct args {

@@ -1,6 +1,8 @@
 #include "josh.h"
 
-
+// allocCheck
+// Given any pointer to a space in memory, checks is there has been space
+// allocated for that pointer. Exits if no space has been allocated.
 void allocCheck(void *pointer) {
   if (NULL == pointer) {
     fprintf(stderr, "%s\n", "Could not allocate memory");
@@ -8,6 +10,8 @@ void allocCheck(void *pointer) {
   }
 }
 
+// sigHandler
+// for CTRL-C. Forwards kill signal to child, without stopping Josh.
 void sigHandler(int sig) {
   switch(sig) {
     case SIGINT:
@@ -15,6 +19,9 @@ void sigHandler(int sig) {
   }
 }
 
+// strRealloc
+// Given a string that has more space than it is using, reallocates
+// so there is just as much space as the string needs. Reduces allocated memory space.
 void strRealloc(char *string) {
   int len;
   len = strlen(string);
@@ -32,15 +39,14 @@ void freeArgs(struct args *arguments) {
 
 void string_array_free(char ** strings) {
   int i = 0;
-  while (NULL != strings[i]) {
-    free(strings[i]);
-    i++;
-  }
+  while (NULL != strings[i])
+    free(strings[i++]);
   free(strings);
 }
 
-
-
+// p2
+// given a command and argument (in form args), forks and execs the call to shell.
+// performs redirects, backgrounding and piping as given.
 void p2(struct args *arguments){
   FILE *input, *output;
   /*while (NULL != args[len])
@@ -52,30 +58,31 @@ void p2(struct args *arguments){
   }
   if (child){
     int status;
-    if (arguments->background) {
+    if (NULL != arguments->shell_args[0] && '&' == arguments->shell_args[0][0]) {
       printf("anded");
       waitpid(-1, &status, WNOHANG);
-    } else {
+    }
+    else {
       //printf("fg\n");
       signal(SIGINT, sigHandler);
       wait(&status);
-      freeArgs(arguments);
     }
   }
   else {
-    if (arguments->in_redir) {
-      input = fopen(arguments->in_file, "r");
+    int pipebool = 0;
+    if (NULL != arguments->shell_args[0] && '<' == arguments->shell_args[0][0]) {
+      input = fopen(arguments->shell_args[1], "r");
       dup2(fileno(input), STDIN_FILENO);
       fclose(input);
     }
-    if (arguments->out_redir) {
-      output = fopen(arguments->out_file, "w");
+    if (NULL != arguments->shell_args[0] && '>' == arguments->shell_args[0][0]) {
+      output = fopen(arguments->shell_args[1], "w");
       dup2(fileno(output), STDOUT_FILENO);
       fclose(output);
     }
     execvp(arguments->program, arguments->program_args);
     perror("Exec failed");
-    //freeArgs(arguments);
+    //argFree(args);
     exit(EXIT_FAILURE);
   }
 
@@ -185,22 +192,26 @@ struct args * parse(char *input) {
 int main() {
   int c, i;
   struct args *arguments;
-  //arguments = 
   char *input;
+  char *usrname = getlogin();
   i = 0;
   input = malloc(sizeof(char) * MAX_INPUT);
   allocCheck(input);
-  printf("$");
+  printf("%s%s",usrname,josh_prompt);
   while (EOF != (c = getchar())) {
     if (i == MAX_INPUT) {
       // handle overflow
     } else if ('\n' == c) {
       input[i] = '\0';
+      if(strcmp("exit",input) == 0){
+	free(input);
+        break;
+      } 
       arguments = parse(input);
       p2(arguments);
       allocCheck(input);
       i = 0;
-      printf("$");
+      printf("%s%s",usrname,josh_prompt);
     } else {
       input[i] = c;
       i++;
