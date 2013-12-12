@@ -81,7 +81,7 @@ void p2(struct args *arguments){
       dup2(fileno(output), STDOUT_FILENO);
       fclose(output);
     }
-    if (NULL != arguments->shell_args[0] && arguments->shell_args[0][0] == '|') {  
+    /*if (NULL != arguments->shell_args[0] && arguments->shell_args[0][0] == '|') {  
       pipebool = 1;
       pid_t forkChild;
       int fd[2];
@@ -98,7 +98,8 @@ void p2(struct args *arguments){
   	close(fd[1]);
         execvp(arguments->program, arguments->program_args);                                         // Executes child's program
       }
-      else{                // After pipe
+ tring_array_free(args);
+ else{                // After pipe
         close(fd[1]);                                                   // Close unnecessary parent input link to tunnel
         dup2(fd[0], STDIN_FILENO);                                     // Change parent's output to tunnel input
   	close(fd[0]);
@@ -108,7 +109,8 @@ void p2(struct args *arguments){
         while(NULL != arguments->shell_args[i+1])                     // Get number of child's program arguments (terminating NULL included)
           i++;
         cpargs = malloc(sizeof(char *) * (i + 1));
-        allocCheck(cpargs);
+  string_array_free(args);
+  allocCheck(cpargs);
         for (int j = 0; j < i; j++) {                                 // Fill child's program args
           int len = strlen(arguments->shell_args[j+1]) + 1;
           cpargs[j] = malloc(sizeof(char) * len);
@@ -118,7 +120,7 @@ void p2(struct args *arguments){
         cpargs[i] = NULL;
         execvp(cprog,cpargs);                                         // Executes child's program
       }
-    }
+    }*/
     if(pipebool == 0)
       execvp(arguments->program, arguments->program_args);
     perror("Exec failed");
@@ -198,24 +200,30 @@ struct args * parse(char *input) {
     else if (args[j][0] == '<' && arguments->in_redir == 0) {
       arguments->in_redir = 1;
       j++;
-      arguments->in_file = args[j];
+      len = strlen(args[j]) + 1;
+      arguments->in_file = malloc(sizeof(char) * len);
+      allocCheck(arguments->in_file);
+      strncpy(arguments->in_file, args[j], len);
     } else if (args[j][0] == '>' && arguments->out_redir == 0) {
       arguments->out_redir = 1;
       j++;
-      arguments->out_file = args[j];
+      len = strlen(args[j]) + 1;
+      arguments->out_file = malloc(sizeof(char) * len);
+      allocCheck(arguments->out_file);
+      strncpy(arguments->out_file, args[j], len);
     }
   }
   arguments->pipe_args = malloc(sizeof(char *) * (size + 1));
   arguments->background = 0; 
-  //int s = 1;
+  int s = 0;
   for (; j < (size); j++) {
     len = strlen(args[j+i]) + 1;
-    arguments->pipe_args[j] = malloc(sizeof(char) * len);
-    allocCheck(arguments->pipe_args[j]);
-    strncpy(arguments->pipe_args[j], args[j+i], len);
-    //s++;
+    arguments->pipe_args[s] = malloc(sizeof(char) * len);
+    allocCheck(arguments->pipe_args[s]);
+    strncpy(arguments->pipe_args[s], args[j+i], len);
+    s++;
   }
-  arguments->pipe_args[j] = NULL;
+  arguments->pipe_args[s] = NULL;
   arguments->pipe_args = realloc(arguments->pipe_args, sizeof(char *) * (j+1));
   allocCheck(arguments->pipe_args);
   // you're done!
@@ -224,7 +232,8 @@ struct args * parse(char *input) {
     printf("arg[%d]: %s\n", i, arguments->shell_args[i]);
     i++;
   }*/
-  string_array_free(args);
+  //string_array_free(args);
+  free(args);
   return arguments;
 }
 
@@ -249,12 +258,15 @@ int main() {
       } 
       arguments = parse(input);
       p2(arguments);
-      allocCheck(input);
+      //allocCheck(input);
       i = 0;
+      //free(input);
       printf("%s%s",usrname,josh_prompt);
     } else {
       input[i] = c;
       i++;
     }
   }
+  if (EOF == c)
+    free(input);
 }
