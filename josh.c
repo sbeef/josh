@@ -1,6 +1,15 @@
+/*
+* josh.c
+* josh is a shell that handles executing programs, redirection, piping, and backgrounding.
+*
+* AUTHOR_NAME, DATE
+*/
+
 #include "josh.h"
 
-
+// allocCheck
+// Given any pointer to a space in memory, checks is there has been space
+// allocated for that pointer. Exits if no space has been allocated.
 void allocCheck(void *pointer) {
   if (NULL == pointer) {
     fprintf(stderr, "%s\n", "Could not allocate memory");
@@ -8,6 +17,8 @@ void allocCheck(void *pointer) {
   }
 }
 
+// sigHandler
+// for CTRL-C. Forwards kill signal to child, without stopping Josh.
 void sigHandler(int sig) {
   switch(sig) {
     case SIGINT:
@@ -15,12 +26,17 @@ void sigHandler(int sig) {
   }
 }
 
+// strRealloc
+// Given a string that has more space than it is using, reallocates
+// so there is just as much space as the string needs. Reduces allocated memory space.
 void strRealloc(char *string) {
   int len;
   len = strlen(string);
   string = realloc(string, len+1);
 }
 
+// argFree
+// loops through and frees the dynamically allocated "args"
 void argFree(char **args) {
   int i = 0;
   while (NULL != args[i])
@@ -28,8 +44,9 @@ void argFree(char **args) {
   free(args);
 }
 
-
-
+// p2
+// given a command and argument (in form args), forks and execs the call to shell.
+// performs redirects, backgrounding and piping as given.
 void p2(struct args *arguments){
   FILE *input, *output;
   /*while (NULL != args[len])
@@ -44,13 +61,15 @@ void p2(struct args *arguments){
     if (NULL != arguments->shell_args[0] && '&' == arguments->shell_args[0][0]) {
       printf("anded");
       waitpid(-1, &status, WNOHANG);
-    } else {
+    }
+    else {
       //printf("fg\n");
       signal(SIGINT, sigHandler);
       wait(&status);
     }
   }
   else {
+    int pipebool = 0;
     if (NULL != arguments->shell_args[0] && '<' == arguments->shell_args[0][0]) {
       input = fopen(arguments->shell_args[1], "r");
       dup2(fileno(input), STDIN_FILENO);
@@ -61,7 +80,46 @@ void p2(struct args *arguments){
       dup2(fileno(output), STDOUT_FILENO);
       fclose(output);
     }
-    execvp(arguments->program, arguments->program_args);
+    if (NULL != arguments->shell_args[0] && arguments->shell_args[0][0] == '|') {  
+      pipebool = 1;
+      pid_t forkChild;
+      int fd[2];
+      pipe(fd);
+
+      forkChild = fork();
+      if(-1 == forkChild){
+	perror("Fork failed");
+	exit(EXIT_FAILURE);
+      }
+      else if(forkChild == 0){						// Before pipe
+	close(fd[0]);
+        dup2(fd[1], STDOUT_FILENO);                                    // Change child's input to tunnel output
+	close(fd[1]);
+        execvp(arguments->program, arguments->program_args);                                         // Executes child's program
+      }
+      else{								// After pipe
+        close(fd[1]);                                                   // Close unnecessary parent input link to tunnel
+        dup2(fd[0], STDIN_FILENO);                                     // Change parent's output to tunnel input
+	close(fd[0]);
+        char *cprog = arguments->shell_args[1];                       // Name child's program
+        char **cpargs;                                                // Initialize child's program arguments
+        int i = 0;
+        while(NULL != arguments->shell_args[i+1])                     // Get number of child's program arguments (terminating NULL included)
+          i++;
+        cpargs = malloc(sizeof(char *) * (i + 1));
+        allocCheck(cpargs);
+        for (int j = 0; j < i; j++) {                                 // Fill child's program args
+          int len = strlen(arguments->shell_args[j+1]) + 1;
+          cpargs[j] = malloc(sizeof(char) * len);
+          allocCheck(cpargs[j]);
+          strncpy(cpargs[j], arguments->shell_args[j+1], len);
+        }
+        cpargs[i] = NULL;
+        execvp(cprog,cpargs);                                         // Executes child's program
+      }
+    }
+    if(pipebool == 0)
+      execvp(arguments->program, arguments->program_args);
     perror("Exec failed");
     //argFree(args);
     exit(EXIT_FAILURE);
@@ -138,20 +196,25 @@ int main() {
   int c, i;
   struct args *arguments;
   char *input;
+  char *usrname = getlogin();
   i = 0;
   input = malloc(sizeof(char) * MAX_INPUT);
   allocCheck(input);
-  printf("$");
+  printf("%s%s",usrname,josh_prompt);
   while (EOF != (c = getchar())) {
     if (i == MAX_INPUT) {
       // handle overflow
     } else if ('\n' == c) {
       input[i] = '\0';
+      if(strcmp("exit",input) == 0){
+	free(input);
+        break;
+      } 
       arguments = parse(input);
       p2(arguments);
       allocCheck(input);
       i = 0;
-      printf("$");
+      printf("%s%s",usrname,josh_prompt);
     } else {
       input[i] = c;
       i++;
