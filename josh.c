@@ -118,10 +118,8 @@ void p2(struct args *arguments){
   }
   if (child){
     int status;
-    if  (arguments->background) {
-      printf("anded");
+    if  (arguments->background)
       waitpid(-1, &status, WNOHANG);
-    }
     else {
       //printf("fg\n");
       //signal(SIGINT, sigHandler);
@@ -253,10 +251,8 @@ struct args * parse(char *input) {
   for (j = 0; j < (size); j++) {
     if (args[j+i][0] == '|')
       break;
-    else if (args[j+i][0] == '&') {
-      printf("found and\n");
+    else if (args[j+i][0] == '&') 
       arguments->background = 1;
-    }
     else if (args[j][0] == '<' && arguments->in_redir == 0) {
       arguments->in_redir = 1;
       j++;
@@ -274,7 +270,7 @@ struct args * parse(char *input) {
     }
   }
   arguments->pipe_args = malloc(sizeof(char *) * (size + 1));
-  arguments->background = 0; 
+  //arguments->background = 0; 
   int s = 0;
   for (; j < (size); j++) {
     len = strlen(args[j+i]) + 1;
