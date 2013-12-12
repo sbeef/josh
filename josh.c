@@ -48,6 +48,55 @@ void string_array_free(char ** strings) {
   free(strings);
 }
 
+// piper
+// executes a multipipe sequence
+// Takes an array of argument strings, and the number of pipes in the command.
+// The argument string would be split up so "foo a | blah bla bla | bar"
+//  would be [ ("foo","a",NULL) , ("blah","bla","bla",NULL) , ("bar",NULL) ]
+void piper(char ***args, int numpipes){
+  
+  int fd[2*numpipes];
+  pid_t cid;
+  
+  for(int i=0;i<numpipes;i++){
+    pipe(fd + 2*i);
+  }
+  
+  int argstep = 0;
+  int fdstep = 0;
+  while(argstep < numpipes){
+    cid = fork();
+    if(cid == -1){				// fork failure
+      perror("Fork failed");
+      exit(EXIT_FAILURE);
+    }
+    else if(cid == 0){				// Child process
+      if(argstep == 0)				// First pipe process
+	dup2(fd[fdstep+1],STDOUT_FILENO);	//   just output
+      else{					// Any middle pipe
+	dup2(fd[fdstep-2],STDIN_FILENO);	//   input redirect
+        dup2(fd[fdstep+1],STDOUT_FILENO);	//   output redirect
+      }
+      for(int i=0;i<2*numpipes;i++){		// Close pipe links
+        close(fd[i]);
+      }
+      execvp(args[argstep][0],args[argstep]);	// Exec child
+    }
+    else{					// Parent process
+     fdstep = fdstep+2;
+     argstep++;
+    }
+  }
+  /* At this point, every pipe should be set exept last, only parent process is running*/
+  dup2(fd[fdstep-2],STDIN_FILENO);
+  for(int i=0;i<2*numpipes;i++){
+    close(fd[i]);
+  }
+  execvp(args[argstep][0],args[argstep]);
+  perror("Exec failed");
+  exit(EXIT_FAILURE);
+}
+
 // p2
 // given a command and argument (in form args), forks and execs the call to shell.
 // performs redirects, backgrounding and piping as given.
