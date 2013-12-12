@@ -15,8 +15,15 @@ void allocCheck(void *pointer) {
 void sigHandler(int sig) {
   switch(sig) {
     case SIGINT:
-      kill(child, SIGINT);
+      if (child) {
+        kill(child, SIGINT);
+        child = 0;
+      }
+      break;
+    default:
+      fprintf(stderr, "Signal %d caught!\n", sig);
   }
+  signal(sig, sigHandler);
 }
 
 // strRealloc
@@ -117,7 +124,7 @@ void p2(struct args *arguments){
     }
     else {
       //printf("fg\n");
-      signal(SIGINT, sigHandler);
+      //signal(SIGINT, sigHandler);
       wait(&status);
       freeArgs(arguments);
     }
@@ -290,6 +297,7 @@ struct args * parse(char *input) {
 
 
 int main() {
+  child = 0;
   int c, i;
   struct args *arguments;
   char *input;
@@ -298,9 +306,27 @@ int main() {
   input = malloc(sizeof(char) * MAX_INPUT);
   allocCheck(input);
   printf("%s%s",usrname,josh_prompt);
-  while (EOF != (c = getchar())) {
+  signal(SIGINT, sigHandler);
+  //c = 0;
+  while (1) {
+    errno = 0;
+    if (EOF == (c = fgetc(stdin))) {
+      if (ferror(stdin) && errno == EINTR) {
+        continue;
+      }
+      if (ferror(stdin)) {
+        perror("reading input");
+        free(input);
+        exit(EXIT_FAILURE);
+      }
+      if (feof(stdin)) {
+        fprintf(stderr, "No More input\n");
+        free(input);
+        exit(EXIT_SUCCESS);
+       }
+    }
     if (i == MAX_INPUT) {
-      // handle overflow
+    // handle overflow
     } else if ('\n' == c) {
       input[i] = '\0';
       if(strcmp("exit",input) == 0){

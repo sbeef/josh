@@ -9,11 +9,13 @@
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <signal.h>
+#include <errno.h>
 
 #define MAX_INPUT 1024
 #define DELIM " "
 
-char *josh_prompt = ":J0Sh:$ ";
+char *josh_prompt = ":J☺Sh:$ ";
 pid_t child;
 
 struct args {
