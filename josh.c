@@ -20,6 +20,11 @@ void sigHandler(int sig) {
         child = 0;
       }
       break;
+    case SIGTSTP:
+      if (child) {
+        kill(child, SIGCONT);
+      }
+      break;
     default:
       fprintf(stderr, "Signal %d caught!\n", sig);
   }
@@ -176,7 +181,7 @@ void p2(struct args *arguments){
     else {
       //printf("fg\n");
       //signal(SIGINT, sigHandler);
-      wait(&status);
+      waitpid(-1, &status, WCONTINUED);
       freeArgs(arguments);
     }
   }
@@ -244,11 +249,13 @@ void p2(struct args *arguments){
     }
     if(pipebool == 0)
       execvp(arguments->program, arguments->program_args);
-    perror("Exec failed");
+    if (errno) {
+      perror("Exec failed");
+      freeArgs(arguments);
     //argFree(args);
-    exit(EXIT_FAILURE);
+    //exit(EXIT_FAILURE);
+    }
   }
-
 }
 
 struct args * arginit() {
@@ -318,20 +325,20 @@ struct args * parse(char *input) {
       break;
     else if (args[j+i][0] == '&') 
       arguments->background = 1;
-    else if (args[j][0] == '<' && arguments->in_redir == 0) {
+    else if (args[j+i][0] == '<' && arguments->in_redir == 0) {
       arguments->in_redir = 1;
       j++;
-      len = strlen(args[j]) + 1;
+      len = strlen(args[j+i]) + 1;
       arguments->in_file = malloc(sizeof(char) * len);
       allocCheck(arguments->in_file);
-      strncpy(arguments->in_file, args[j], len);
-    } else if (args[j][0] == '>' && arguments->out_redir == 0) {
+      strncpy(arguments->in_file, args[j+i], len);
+    } else if (args[j+i][0] == '>' && arguments->out_redir == 0) {
       arguments->out_redir = 1;
       j++;
-      len = strlen(args[j]) + 1;
+      len = strlen(args[j+i]) + 1;
       arguments->out_file = malloc(sizeof(char) * len);
       allocCheck(arguments->out_file);
-      strncpy(arguments->out_file, args[j], len);
+      strncpy(arguments->out_file, args[j+i], len);
     }
   }
   arguments->pipe_args = malloc(sizeof(char *) * (size + 1));
@@ -370,6 +377,7 @@ int main() {
   allocCheck(input);
   printf("%s%s",usrname,josh_prompt);
   signal(SIGINT, sigHandler);
+  signal(SIGTSTP, sigHandler);
   //c = 0;
   while (1) {
     errno = 0;
@@ -394,10 +402,12 @@ int main() {
       input[i] = '\0';
       if(strcmp("exit",input) == 0){
 	free(input);
+        freeArgs(arguments);
         break;
       } 
       arguments = parse(input);
-      p2(arguments);
+      if (NULL != arguments)
+        p2(arguments);
       //allocCheck(input);
       i = 0;
       //free(input);
@@ -408,5 +418,6 @@ int main() {
     }
   }
   if (EOF == c)
+    freeArgs(arguments);
     free(input);
 }

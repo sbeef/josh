@@ -27,6 +27,7 @@ struct args {
   char * out_file;
   char * in_file;
   int background;
+  int numpipes;
 };
 
 void freeArgs(struct args *arguments);
