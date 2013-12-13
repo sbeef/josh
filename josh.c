@@ -55,13 +55,66 @@ void string_array_free(char ** strings) {
   free(strings);
 }
 
+// pipearg
+// creates an three dimensional character array for piper to use
+char ***pipearg(struct args *a){
+  int i, j, k, g;
+  i = j = 0;
+  char ***b;
+  char *s = a->pipe_args[0];
+  while( s != NULL ){				// count number of pipes
+    if(strcmp(s,"|") == 0)
+      j++;
+    i++;
+    s = a->pipe_args[i];
+  }
+  b = malloc( sizeof(char **) * (j + 1));	// Malloc amount of commands
+  allocCheck(b);
+  
+  b[0] = a->program_args;			// Assign first command
+  
+  s = a->pipe_args[1];
+  i = j = k = 1;
+  while( s != NULL ){				// Assign other commands
+    if(strcmp(s,"|") == 0){
+      b[k] = malloc( sizeof(char *) * i);
+      allocCheck(b[k]);
+      g = 0;
+      for(;j<i;j++){
+        int len = strlen(a->pipe_args[j]) + 1;
+        b[k][g] = malloc(sizeof(char) * len);
+        allocCheck(b[k][g]);
+        strncpy(b[k][g], a->pipe_args[j], len);
+        g++;
+      }
+      j++;
+      b[k][g] = NULL;
+      k++;
+    }
+    i++;
+    s = a->pipe_args[i];
+  }
+  b[k] = malloc( sizeof(char *) * i);		// assign last command
+  allocCheck(b[k]);
+  g = 0;
+  for(;j<i;j++){
+    int len = strlen(a->pipe_args[j]) + 1;
+    b[k][g] = malloc(sizeof(char) * len);
+    allocCheck(b[k][g]);
+    strncpy(b[k][g], a->pipe_args[j], len);
+    g++;
+  }
+  b[k][g] = NULL;
+  
+  return b;
+} 
+
 // piper
 // executes a multipipe sequence
 // Takes an array of argument strings, and the number of pipes in the command.
 // The argument string would be split up so "foo a | blah bla bla | bar"
 //  would be [ ("foo","a",NULL) , ("blah","bla","bla",NULL) , ("bar",NULL) ]
 void piper(char ***args, int numpipes){
-  
   int fd[2*numpipes];
   pid_t cid;
   
@@ -140,8 +193,20 @@ void p2(struct args *arguments){
       fclose(output);
     }
     if (NULL != arguments->pipe_args[0] && arguments->pipe_args[0][0] == '|') {  
+      char ***b = pipearg(arguments);    
       pipebool = 1;
-      pid_t forkChild;
+      char *s = arguments->pipe_args[0];
+      int i, numpipe;
+      i = numpipe = 0;
+      while( s != NULL ){                           // count number of pipes
+        if(strcmp(s,"|") == 0)
+          numpipe++;
+        i++;
+        s = arguments->pipe_args[i];
+      }
+      piper(b,numpipe);
+      
+      /*pid_t forkChild;
       int fd[2];
       pipe(fd);
 
@@ -175,7 +240,7 @@ void p2(struct args *arguments){
         cpargs[i] = NULL;
         execvp(cprog,cpargs);                                         // Executes child's program
         string_array_free(cpargs);
-      }
+      }*/
     }
     if(pipebool == 0)
       execvp(arguments->program, arguments->program_args);
